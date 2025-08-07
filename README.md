@@ -6,6 +6,8 @@ This is the **Frontend** for the IMAGO Media Search application built using **Ne
 
 ## LIVE HOISTED URL
 
+https://imago-media-search.vercel.app/
+
 ## Prerequisites
 
 Before setting up the frontend, ensure you have the following installed:
