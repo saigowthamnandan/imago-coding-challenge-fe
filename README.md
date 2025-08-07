@@ -4,6 +4,8 @@ This is the **Frontend** for the IMAGO Media Search application built using **Ne
 
 ---
 
+## LIVE HOISTED URL
+
 ## Prerequisites
 
 Before setting up the frontend, ensure you have the following installed:
@@ -19,8 +21,8 @@ Before setting up the frontend, ensure you have the following installed:
 1. Clone the repository:
 
 ```bash
-   git clone <repo-url>
-   cd <repo-folder>
+   git clone https://github.com/saigowthamnandan/imago-coding-challenge-fe.git
+   cd imago-coding-challenge-fe
 ```
 
 2. Install dependencies
