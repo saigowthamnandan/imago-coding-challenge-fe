@@ -1,103 +1,258 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Header from "@/components/Header";
+import MediaCard, { MediaItem } from "@/components/MediaCard";
+import Pagination from "@/components/Pagination";
+import Select from "@/components/Select";
+import { DB_EDDOC, IconVariants, SORT_ORDER } from "@/utils/enums";
+import { useCallback, useEffect, useState } from "react";
+import SvgIcon from "@/components/SvgIcon";
+import FilterSheet from "@/components/FiltersSheet";
+import DateSort from "@/components/DateSort";
+
+export default function SearchInput() {
+  const [input, setInput] = useState<string>("");
+  const [query, setQuery] = useState<string>("");
+  const [results, setResults] = useState<MediaItem[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [dbType, setDbType] = useState<DB_EDDOC>(DB_EDDOC.SPORT);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [errorMsg, setErrorMsg] = useState<string>("");
+  const [photoGrapher, setPhotoGrapher] = useState<string>("");
+  const [dateSortOrder, setDateSortOrder] = useState<SORT_ORDER>(
+    SORT_ORDER.NONE
+  );
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isScrollLayout, setIsScrollLayout] = useState<boolean>(false);
+  const [scrollId, setScrollId] = useState<string>("");
+
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    const controller = new AbortController();
+    const searchParam = new URLSearchParams({
+      query,
+      page: page.toString(),
+      // pagesize: isScrollLayout ? "50" : pageSize.toString(),
+      pagesize: pageSize.toString(),
+      db: dbType,
+      datefrom: dateFrom,
+      dateto: dateTo,
+      fotografen: photoGrapher,
+      datesort: dateSortOrder,
+      // isscroll: isScrollLayout.toString(),
+      // scrollid: scrollId,
+    });
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/media/search?${searchParam}`, {
+      signal: controller.signal,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (isScrollLayout) {
+          if (data.results.length > 0) {
+            // Append new data to existing data
+            setResults((prevData) => [...prevData, ...data.results]);
+            // Update scroll ID for next fetch
+            setScrollId(data.scrollid);
+          }
+        } else {
+          setResults(data.results);
+          setTotalPages(data.total);
+        }
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") console.error(err);
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [
+    query,
+    page,
+    pageSize,
+    dbType,
+    dateFrom,
+    dateTo,
+    photoGrapher,
+    dateSortOrder,
+    isScrollLayout,
+    // scrollId,
+  ]);
+
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      setQuery(input);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(debounce);
+  }, [input]);
+
+  useEffect(() => {
+    fetchData();
+  }, [
+    query,
+    page,
+    pageSize,
+    dbType,
+    dateFrom,
+    dateTo,
+    photoGrapher,
+    dateSortOrder,
+    isScrollLayout,
+    scrollId,
+    fetchData,
+  ]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (
+        window.innerHeight + document.documentElement.scrollTop ===
+        document.documentElement.scrollHeight
+      ) {
+        // Trigger scroll if we're at the bottom of the page
+        fetchData();
+      }
+    };
+
+    window.addEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [scrollId, loading, fetchData]);
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div className="flex flex-col gap-1 items-center justify-center">
+      <Header />
+      <div
+        className={`flex mt-22 ${isFilterSheetOpen ? "pr-10" : "px-10"} w-full`}
+      >
+        <FilterSheet
+          isOpen={isFilterSheetOpen}
+          dbType={dbType}
+          setDbType={setDbType}
+          dateFrom={dateFrom}
+          setDateFrom={setDateFrom}
+          dateTo={dateTo}
+          setDateTo={setDateTo}
+          photoGrapher={photoGrapher}
+          setPhotoGrapher={setPhotoGrapher}
+          errorMsg={errorMsg}
+          setErrorMsg={setErrorMsg}
+          onClose={() => setIsFilterSheetOpen(false)}
         />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+        <div
+          className={`flex flex-col gap-4 w-full items-center justify-center ${
+            isFilterSheetOpen && "ml-[30%]"
+          }`}
+        >
+          <div className="flex gap-4 items-center w-full">
+            <div
+              onClick={() => {
+                setIsFilterSheetOpen(!isFilterSheetOpen);
+              }}
+              className="flex text-sm font-semibold items-center text-white cursor-pointer bg-[#06B6D4] p-1 py-2 gap-1 rounded hover:bg-slate-200 hover:text-slate-500 shadow-md transition-colors duration-400 ease-in-out"
+            >
+              <div className="w-max">
+                {isFilterSheetOpen ? "Hide Filters" : "Show Filters"}
+              </div>
+              <SvgIcon
+                name="filter"
+                alt="Filter"
+                fill="currentColor"
+                variant={IconVariants.MEDIUM}
+                className="w-4 h-4"
+              />
+            </div>
+            <input
+              name="search"
+              type="text"
+              placeholder="Search media..."
+              className="border p-2 w-full outline-none rounded"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <DateSort
+              dateSortOrder={dateSortOrder}
+              setDateSortOrder={setDateSortOrder}
+            />
+            {/* This component is for switching the layout but turned off for now as this coding challenge user doesn't have access to scroll API so we can't use it */}
+
+            {/* <div className="flex justify-between items-center border-2 border-[#06B6D4] rounded cursor-pointer">
+              <SvgIcon
+                name="grid"
+                alt="Grid"
+                className={`w-6 h-6 p-1 ${
+                  !isScrollLayout && "text-white bg-[#06B6D4]"
+                }`}
+                fill="CurrentColor"
+                variant={IconVariants.LARGE}
+                onClick={() => setIsScrollLayout(false)}
+              />
+              <SvgIcon
+                name="ellipsis"
+                alt="Ellipsis"
+                fill="currentColor"
+                variant={IconVariants.LARGE}
+                className={`w-6 h-6 ${
+                  isScrollLayout && "text-white bg-[#06B6D4]"
+                }`}
+                onClick={() => setIsScrollLayout(true)}
+              />
+            </div> */}
+          </div>
+          {totalPages > 1 && !isScrollLayout && (
+            <div className="flex gap-4 w-full justify-between items-center">
+              <div className="text-sm">
+                Showing page {page} of {totalPages} results
+              </div>
+              <div className="flex gap-4 justify-center items-center">
+                <Pagination
+                  presentPage={page}
+                  rowsPerPage={pageSize}
+                  totalCount={totalPages}
+                  onPageChange={setPage}
+                />
+                <Select
+                  value={pageSize.toString()}
+                  options={[
+                    { displayKey: "10", displayValue: "10" },
+                    { displayKey: "20", displayValue: "20" },
+                    { displayKey: "30", displayValue: "30" },
+                  ]}
+                  onChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                  className="w-max max-w-md px-0 pr-2 py-2 text-sm hover:border-[#a6edf9] rounded"
+                  name="Page Size"
+                  displayKey="displayKey"
+                  displayValue="displayValue"
+                />
+              </div>
+            </div>
+          )}
+          {results.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+              {results.map((item) => (
+                <MediaCard key={`${item.bildnummer}}`} item={item} />
+              ))}
+            </div>
+          )}
+          {totalPages > 1 && !isScrollLayout && (
+            <div className="mt-4 mb-6">
+              <Pagination
+                presentPage={page}
+                rowsPerPage={pageSize}
+                totalCount={totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
